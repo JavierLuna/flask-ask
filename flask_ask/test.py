@@ -59,14 +59,14 @@ class AlexaRequestBuilder:
         self._new_session = is_new_session
         return self
 
-    def make(self) -> dict:
+    def make(self):
         return {'version': self._generate_version_envelope(), 'session': self._generate_session_envelope(),
                 'context': self._generate_context_envelope(), 'request': self._generate_request_envelope()}
 
-    def _generate_version_envelope(self) -> str:
+    def _generate_version_envelope(self):
         return self._version
 
-    def _generate_session_envelope(self) -> dict:
+    def _generate_session_envelope(self):
         return {
             'new': self._new_session,
             'sessionId': self._session_id,
@@ -75,7 +75,7 @@ class AlexaRequestBuilder:
             'user': {'userId': self._user_id},
         }
 
-    def _generate_context_envelope(self) -> dict:
+    def _generate_context_envelope(self):
         return {
             'System': {
                 'application': {'applicationId': self._application_id},
@@ -88,7 +88,7 @@ class AlexaRequestBuilder:
             }
         }
 
-    def _generate_request_envelope(self) -> dict:
+    def _generate_request_envelope(self):
         return {
             'type': self._request_type,
             'request_id': self._request_id,
@@ -98,14 +98,14 @@ class AlexaRequestBuilder:
             'dialogState': "STARTED"
         }
 
-    def _generate_intent_envelope(self) -> dict:
+    def _generate_intent_envelope(self):
         return {
             'name': self._intent_name,
             'confirmationStatus': "NONE",
             'slots': self._generate_slots_envelope(),
         }
 
-    def _generate_slots_envelope(self) -> dict:
+    def _generate_slots_envelope(self):
         return {slot_name: {
             "name": slot_name,
             "value": slot_value['value'],
@@ -135,11 +135,11 @@ class AlexaRequestBuilder:
 class AlexaRequestFactory:
 
     @staticmethod
-    def create_launch_request() -> dict:
+    def create_launch_request():
         return AlexaRequestBuilder().new_session(True).make()
 
     @staticmethod
-    def create_intent_request(intent_name, slots=None) -> dict:
+    def create_intent_request(intent_name, slots=None):
         slots = slots or {}
         request_builder = AlexaRequestBuilder().new_session(False).intent(intent_name)
         for slot_name, slot_value in slots.items():
@@ -153,16 +153,16 @@ class AskTestClient:
         self.client = client
         self.skill_route = skill_route
 
-    def do_launch(self):
+    def perform_launch(self):
         request = AlexaRequestFactory.create_launch_request()
-        return self.do_request(request)
+        return self.perform_request(request)
 
-    def do_intent(self, intent_name, slots=None):
+    def perform_intent(self, intent_name, slots=None):
         slots = slots or {}
         request = AlexaRequestFactory.create_intent_request(intent_name, slots=slots)
-        return self.do_request(request)
+        return self.perform_request(request)
 
-    def do_request(self, request) -> 'AlexaResponse':
+    def perform_request(self, request):
         return AlexaResponse(self.client.post(self.skill_route,
                                               data=json.dumps(request),
                                               headers={'Accept': 'application/json', 'Content-Type': 'application/json'}

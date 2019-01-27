@@ -145,7 +145,7 @@ class AudioIntegrationAskTestClientTests(unittest.TestCase):
 
     def test_play_intent(self):
         """ Test to see if we can properly play a stream """
-        response = self.client.do_intent('TestPlay')
+        response = self.client.perform_intent('TestPlay')
         self.assertEqual(200, response.status_code)
 
         data = json.loads(response.raw_response.data.decode('utf-8'))
@@ -163,7 +163,7 @@ class AudioIntegrationAskTestClientTests(unittest.TestCase):
         """ Test to check that custom token supplied is returned """
 
         # change the intent name to route to our custom token for play_request
-        response = self.client.do_intent('TestCustomTokenIntents')
+        response = self.client.perform_intent('TestCustomTokenIntents')
         self.assertEqual(200, response.status_code)
 
         data = json.loads(response.raw_response.data.decode('utf-8'))

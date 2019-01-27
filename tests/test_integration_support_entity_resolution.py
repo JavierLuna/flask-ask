@@ -25,7 +25,7 @@ class CustomSlotTypeIntegrationTests(unittest.TestCase):
 
     def test_custom_slot_type_intent(self):
         """ Test to see if custom slot type value is correct """
-        response = self.client.do_intent("TestCustomSlotTypeIntents", slots={'child_info': "friend_info"})
+        response = self.client.perform_intent("TestCustomSlotTypeIntents", slots={'child_info': "friend_info"})
         self.assertEqual(200, response.status_code)
         self.assertEqual('friend_info',response.text)
 

@@ -79,49 +79,49 @@ class SmokeTestUsingSamples(unittest.TestCase):
     def test_helloworld(self):
         """ Test the HelloWorld sample project """
         self._launch('helloworld/helloworld.py')
-        launch_response = self.test_client.do_launch()
+        launch_response = self.test_client.perform_launch()
         self.assertTrue('hello' in launch_response.text)
 
     def test_session_sample(self):
         """ Test the Session sample project """
         self._launch('session/session.py')
-        launch_response = self.test_client.do_launch()
+        launch_response = self.test_client.perform_launch()
         self.assertTrue('favorite color' in launch_response.text)
 
     def test_audio_simple_demo(self):
         """ Test the SimpleDemo Audio sample project """
         self._launch('audio/simple_demo/ask_audio.py')
-        launch_response = self.test_client.do_launch()
+        launch_response = self.test_client.perform_launch()
         self.assertTrue('audio example' in launch_response.text)
 
     def test_audio_playlist_demo(self):
         """ Test the Playlist Audio sample project """
         self._launch('audio/playlist_demo/playlist.py')
-        launch_response = self.test_client.do_launch()
+        launch_response = self.test_client.perform_launch()
         self.assertTrue('playlist' in launch_response.text)
 
     def test_blueprints_demo(self):
         """ Test the sample project using Flask Blueprints """
         self._launch('blueprint_demo/demo.py')
         self.test_client = AskTestClient(self.SmokeRequestClient, skill_route='/ask')
-        launch_response = self.test_client.do_launch()
+        launch_response = self.test_client.perform_launch()
         self.assertTrue('hello' in launch_response.text)
 
     def test_history_buff(self):
         """ Test the History Buff sample """
         self._launch('historybuff/historybuff.py')
-        launch_response = self.test_client.do_launch()
+        launch_response = self.test_client.perform_launch()
         self.assertTrue('History buff' in launch_response.text)
 
     def test_spacegeek(self):
         """ Test the Spacegeek sample """
         self._launch('spacegeek/spacegeek.py')
-        launch_response = self.test_client.do_launch()
+        launch_response = self.test_client.perform_launch()
         # response is random
         self.assertTrue(len(launch_response.text) > 1)
 
     def test_tidepooler(self):
         """ Test the Tide Pooler sample """
         self._launch('tidepooler/tidepooler.py')
-        launch_response = self.test_client.do_launch()
+        launch_response = self.test_client.perform_launch()
         self.assertTrue('Which city' in launch_response.reprompt)
