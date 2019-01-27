@@ -5,6 +5,7 @@ import uuid
 from flask_ask import Ask, audio
 from flask import Flask
 
+from flask_ask.test import AskTestClient
 
 play_request = {
   "version": "1.0",
@@ -116,6 +117,65 @@ class AudioIntegrationTests(unittest.TestCase):
 
         # reset our play_request
         play_request['request']['intent']['name'] = original_intent_name
+
+
+class AudioIntegrationAskTestClientTests(unittest.TestCase):
+    """ Integration tests of the Audio Directives """
+
+    def setUp(self):
+        self.app = Flask(__name__)
+        self.app.config['ASK_VERIFY_REQUESTS'] = False
+        self.ask = Ask(app=self.app, route='/ask')
+        self.request_client = self.app.test_client()
+        self.client = AskTestClient(self.request_client, skill_route='/ask')
+        self.stream_url = 'https://fakestream'
+        self.custom_token = 'custom_uuid_{0}'.format(str(uuid.uuid4()))
+
+        @self.ask.intent('TestPlay')
+        def play():
+            return audio('playing').play(self.stream_url)
+
+        @self.ask.intent('TestCustomTokenIntents')
+        def custom_token_intents():
+            return audio('playing with custom token').play(self.stream_url,
+                                                           opaque_token=self.custom_token)
+
+    def tearDown(self):
+        pass
+
+    def test_play_intent(self):
+        """ Test to see if we can properly play a stream """
+        response = self.client.do_intent('TestPlay')
+        self.assertEqual(200, response.status_code)
+
+        data = json.loads(response.raw_response.data.decode('utf-8'))
+        self.assertEqual('playing',response.text)
+
+        directive = data['response']['directives'][0]
+        self.assertEqual('AudioPlayer.Play', directive['type'])
+
+        stream = directive['audioItem']['stream']
+        self.assertIsNotNone(stream['token'])
+        self.assertEqual(self.stream_url, stream['url'])
+        self.assertEqual(0, stream['offsetInMilliseconds'])
+
+    def test_play_intent_with_custom_token(self):
+        """ Test to check that custom token supplied is returned """
+
+        # change the intent name to route to our custom token for play_request
+        response = self.client.do_intent('TestCustomTokenIntents')
+        self.assertEqual(200, response.status_code)
+
+        data = json.loads(response.raw_response.data.decode('utf-8'))
+        self.assertEqual('playing with custom token', response.text)
+
+        directive = data['response']['directives'][0]
+        self.assertEqual('AudioPlayer.Play', directive['type'])
+
+        stream = directive['audioItem']['stream']
+        self.assertEqual(stream['token'], self.custom_token)
+        self.assertEqual(self.stream_url, stream['url'])
+        self.assertEqual(0, stream['offsetInMilliseconds'])
 
 
 if __name__ == '__main__':

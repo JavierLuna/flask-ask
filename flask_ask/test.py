@@ -1,3 +1,6 @@
+import json
+
+
 class AlexaRequestBuilder:
 
     def __init__(self):
@@ -56,14 +59,14 @@ class AlexaRequestBuilder:
         self._new_session = is_new_session
         return self
 
-    def make(self):
+    def make(self) -> dict:
         return {'version': self._generate_version_envelope(), 'session': self._generate_session_envelope(),
                 'context': self._generate_context_envelope(), 'request': self._generate_request_envelope()}
 
-    def _generate_version_envelope(self):
+    def _generate_version_envelope(self) -> str:
         return self._version
 
-    def _generate_session_envelope(self):
+    def _generate_session_envelope(self) -> dict:
         return {
             'new': self._new_session,
             'sessionId': self._session_id,
@@ -72,7 +75,7 @@ class AlexaRequestBuilder:
             'user': {'userId': self._user_id},
         }
 
-    def _generate_context_envelope(self):
+    def _generate_context_envelope(self) -> dict:
         return {
             'System': {
                 'application': {'applicationId': self._application_id},
@@ -85,7 +88,7 @@ class AlexaRequestBuilder:
             }
         }
 
-    def _generate_request_envelope(self):
+    def _generate_request_envelope(self) -> dict:
         return {
             'type': self._request_type,
             'request_id': self._request_id,
@@ -95,14 +98,14 @@ class AlexaRequestBuilder:
             'dialogState': "STARTED"
         }
 
-    def _generate_intent_envelope(self):
+    def _generate_intent_envelope(self) -> dict:
         return {
             'name': self._intent_name,
             'confirmationStatus': "NONE",
             'slots': self._generate_slots_envelope(),
         }
 
-    def _generate_slots_envelope(self):
+    def _generate_slots_envelope(self) -> dict:
         return {slot_name: {
             "name": slot_name,
             "value": slot_value['value'],
@@ -132,11 +135,11 @@ class AlexaRequestBuilder:
 class AlexaRequestFactory:
 
     @staticmethod
-    def create_launch_request():
+    def create_launch_request() -> dict:
         return AlexaRequestBuilder().new_session(True).make()
 
     @staticmethod
-    def create_intent_request(intent_name, slots=None):
+    def create_intent_request(intent_name, slots=None) -> dict:
         slots = slots or {}
         request_builder = AlexaRequestBuilder().new_session(False).intent(intent_name)
         for slot_name, slot_value in slots.items():
@@ -146,13 +149,56 @@ class AlexaRequestFactory:
 
 class AskTestClient:
 
-    def __init__(self, skill_route='/'):
+    def __init__(self, client, skill_route='/'):
+        self.client = client
         self.skill_route = skill_route
 
-    def launch(self):
+    def do_launch(self):
         request = AlexaRequestFactory.create_launch_request()
-        request
+        return self.do_request(request)
+
+    def do_intent(self, intent_name, slots=None):
+        slots = slots or {}
+        request = AlexaRequestFactory.create_intent_request(intent_name, slots=slots)
+        return self.do_request(request)
+
+    def do_request(self, request) -> 'AlexaResponse':
+        return AlexaResponse(self.client.post(self.skill_route,
+                                              data=json.dumps(request),
+                                              headers={'Accept': 'application/json', 'Content-Type': 'application/json'}
+                                              ))
 
 
-client = AskTestClient()
-client.launch()
+class AlexaResponse:
+
+    def __init__(self, raw_response):
+        self.raw_response = raw_response
+        if hasattr(raw_response, 'data'):
+            self.response = json.loads(raw_response.data)  # Flask test client
+        else:
+            self.response = raw_response.json()  # requests client
+
+    @property
+    def text(self):
+        return self.response.get('response', {}) \
+            .get('outputSpeech', {}) \
+            .get('text', None)
+
+    @property
+    def reprompt(self):
+        return self.response.get('response', {}) \
+            .get('reprompt', {}) \
+            .get('outputSpeech', {}) \
+            .get('text', None)
+
+    @property
+    def ends_session(self):
+        return self.response.get('response', {}).get('shouldEndSession', True)
+
+    @property
+    def session_attributes(self):
+        return self.response.get('sessionAttributes', {})
+
+    @property
+    def status_code(self):
+        return self.raw_response.status_code

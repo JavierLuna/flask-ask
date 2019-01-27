@@ -12,52 +12,7 @@ import subprocess
 from requests import post
 
 import flask_ask
-
-
-launch = {
-  "version": "1.0",
-  "session": {
-    "new": True,
-    "sessionId": "amzn1.echo-api.session.0000000-0000-0000-0000-00000000000",
-    "application": {
-      "applicationId": "fake-application-id"
-    },
-    "attributes": {},
-    "user": {
-      "userId": "amzn1.account.AM3B00000000000000000000000"
-    }
-  },
-  "context": {
-    "System": {
-      "application": {
-        "applicationId": "fake-application-id"
-      },
-      "user": {
-        "userId": "amzn1.account.AM3B00000000000000000000000"
-      },
-      "device": {
-        "supportedInterfaces": {
-          "AudioPlayer": {}
-        }
-      }
-    },
-    "AudioPlayer": {
-      "offsetInMilliseconds": 0,
-      "playerActivity": "IDLE"
-    }
-  },
-  "request": {
-    "type": "LaunchRequest",
-    "requestId": "string",
-    "timestamp": "string",
-    "locale": "string",
-    "intent": {
-      "name": "TestPlay",
-      "slots": {
-        }
-      }
-    }
-}
+from flask_ask.test import AskTestClient
 
 
 project_root = os.path.abspath(os.path.join(flask_ask.__file__, '../..'))
@@ -75,6 +30,20 @@ class SmokeTestUsingSamples(unittest.TestCase):
             self.env['SYSTEMROOT'] = os.getenv('SYSTEMROOT')
             self.env['PATH'] = os.getenv('PATH')
 
+        self.host = 'http://127.0.0.1'
+        self.port = 5000
+        self.url = "{host}:{port}".format(host=self.host, port=self.port)
+
+        class SmokeRequestClient:
+            @staticmethod
+            def post(skill_route, data=None, **kwargs):
+                data = data or {}
+                return post(self.url+skill_route, data=data, **kwargs)
+
+        self.SmokeRequestClient = SmokeRequestClient
+
+        self.test_client = AskTestClient(SmokeRequestClient)
+
     def _launch(self, sample):
         prefix = os.path.join(project_root, 'samples/')
         path = prefix + sample
@@ -84,20 +53,6 @@ class SmokeTestUsingSamples(unittest.TestCase):
                           msg='Poll should work,'
                           'otherwise we failed to launch')
         self.process = process
-
-    def _post(self, route='/', data={}):
-        url = 'http://127.0.0.1:5000' + str(route)
-        print('POSTing to %s' % url)
-        response = post(url, json=data)
-        self.assertEqual(200, response.status_code)
-        return response
-
-    @staticmethod
-    def _get_text(http_response):
-        data = http_response.json()
-        return data.get('response', {})\
-                   .get('outputSpeech', {})\
-                   .get('text', None)
 
     @staticmethod
     def _get_reprompt(http_response):
@@ -124,48 +79,49 @@ class SmokeTestUsingSamples(unittest.TestCase):
     def test_helloworld(self):
         """ Test the HelloWorld sample project """
         self._launch('helloworld/helloworld.py')
-        response = self._post(data=launch)
-        self.assertTrue('hello' in self._get_text(response))
+        launch_response = self.test_client.do_launch()
+        self.assertTrue('hello' in launch_response.text)
 
     def test_session_sample(self):
         """ Test the Session sample project """
         self._launch('session/session.py')
-        response = self._post(data=launch)
-        self.assertTrue('favorite color' in self._get_text(response))
+        launch_response = self.test_client.do_launch()
+        self.assertTrue('favorite color' in launch_response.text)
 
     def test_audio_simple_demo(self):
         """ Test the SimpleDemo Audio sample project """
         self._launch('audio/simple_demo/ask_audio.py')
-        response = self._post(data=launch)
-        self.assertTrue('audio example' in self._get_text(response))
+        launch_response = self.test_client.do_launch()
+        self.assertTrue('audio example' in launch_response.text)
 
     def test_audio_playlist_demo(self):
         """ Test the Playlist Audio sample project """
         self._launch('audio/playlist_demo/playlist.py')
-        response = self._post(data=launch)
-        self.assertTrue('playlist' in self._get_text(response))
+        launch_response = self.test_client.do_launch()
+        self.assertTrue('playlist' in launch_response.text)
 
     def test_blueprints_demo(self):
         """ Test the sample project using Flask Blueprints """
         self._launch('blueprint_demo/demo.py')
-        response = self._post(route='/ask', data=launch)
-        self.assertTrue('hello' in self._get_text(response))
+        self.test_client = AskTestClient(self.SmokeRequestClient, skill_route='/ask')
+        launch_response = self.test_client.do_launch()
+        self.assertTrue('hello' in launch_response.text)
 
     def test_history_buff(self):
         """ Test the History Buff sample """
         self._launch('historybuff/historybuff.py')
-        response = self._post(data=launch)
-        self.assertTrue('History buff' in self._get_text(response))
+        launch_response = self.test_client.do_launch()
+        self.assertTrue('History buff' in launch_response.text)
 
     def test_spacegeek(self):
         """ Test the Spacegeek sample """
         self._launch('spacegeek/spacegeek.py')
-        response = self._post(data=launch)
+        launch_response = self.test_client.do_launch()
         # response is random
-        self.assertTrue(len(self._get_text(response)) > 1)
+        self.assertTrue(len(launch_response.text) > 1)
 
     def test_tidepooler(self):
         """ Test the Tide Pooler sample """
         self._launch('tidepooler/tidepooler.py')
-        response = self._post(data=launch)
-        self.assertTrue('Which city' in self._get_reprompt(response))
+        launch_response = self.test_client.do_launch()
+        self.assertTrue('Which city' in launch_response.reprompt)
